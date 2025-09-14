@@ -8,10 +8,7 @@ from langchain.agents import tool, AgentExecutor, create_react_agent
 from langchain_community.vectorstores import Chroma
 from langchain_community.embeddings import HuggingFaceEmbeddings
 
-# Load environment variables from a .env file
 load_dotenv()
-
-# --- 1. SETUP THE RETRIEVER ---
 
 CHROMA_PATH = "chroma"
 EMBEDDING_MODEL_NAME = "sentence-transformers/all-MiniLM-L6-v2"
@@ -25,17 +22,14 @@ def search_paul_graham_essays(query: str) -> str:
     embedding_function = HuggingFaceEmbeddings(model_name=EMBEDDING_MODEL_NAME)
     db = Chroma(persist_directory=CHROMA_PATH, embedding_function=embedding_function)
 
-    # --- FIX 1: Use similarity_search instead of similarity_search_with_relevance_scores ---
     results = db.similarity_search(query, k=3)
 
     if not results:
         return "I could not find any relevant information in Paul Graham's essays for that query."
     
-    # We no longer need to check the score, just format the content.
     context_text = "\n\n---\n\n".join([doc.page_content for doc in results])
     return context_text
 
-# --- 2. SETUP THE AGENT ---
 
 REACT_PROMPT_TEMPLATE = """
 You are an expert researcher specializing in the writings of Paul Graham. Your goal is to provide accurate and comprehensive answers to user questions based on his essays.
@@ -81,16 +75,12 @@ prompt = PromptTemplate.from_template(REACT_PROMPT_TEMPLATE)
 tools = [search_paul_graham_essays]
 agent = create_react_agent(llm, tools, prompt)
 
-# --- FIX 2: Add handle_parsing_errors=True to make the agent more robust ---
 agent_executor = AgentExecutor(
     agent=agent,
     tools=tools,
     verbose=True,
-    handle_parsing_errors=True # This is the safety net
+    handle_parsing_errors=True
 )
-
-
-# --- 3. SETUP THE FASTAPI APP ---
 
 class QueryRequest(BaseModel):
     question: str = Field(..., description="The question to ask the agent.")
